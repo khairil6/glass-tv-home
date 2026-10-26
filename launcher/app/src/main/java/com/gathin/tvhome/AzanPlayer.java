@@ -32,7 +32,7 @@ final class AzanPlayer {
     static final String EXTRA_PRAYER = "prayer";
     static final String EXTRA_CONFIRM = "azan_confirm";
     static final String ACTION_AZAN = "com.gathin.tvhome.AZAN";
-    private static final long WINDOW_MS = 3 * 60 * 1000L;
+    private static final long WINDOW_MS = 12 * 60 * 1000L;
     private static final int ALARM_BASE = 7201;
 
     private static volatile boolean playing;
@@ -131,13 +131,16 @@ final class AzanPlayer {
     }
 
     static void play(Context ctx, String prayer) {
-        if (ctx == null || !isEnabled(ctx) || playing) return;
+        if (ctx == null || !isEnabled(ctx)) return;
         if (prayer == null || prayer.isEmpty()) return;
+        if (playing && AzanService.isRunning()) return;
+        playing = false;
         String stamp = todayKey() + ":" + prayer;
         SharedPreferences sp = ctx.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
         if (stamp.equals(sp.getString(KEY_LAST, ""))) return;
-        sp.edit().putString(KEY_LAST, stamp).apply();
-        startService(ctx, prayer);
+        if (startService(ctx, prayer)) {
+            sp.edit().putString(KEY_LAST, stamp).apply();
+        }
     }
 
     /** Play the selected azan now (settings preview). Does not consume today's prayer stamp. */
@@ -153,16 +156,34 @@ final class AzanPlayer {
         startService(ctx, prayer);
     }
 
-    private static void startService(Context ctx, String prayer) {
+    private static boolean startService(Context ctx, String prayer) {
+        Context app = ctx.getApplicationContext();
+        if (app == null) app = ctx;
         Log.i(TAG, "starting azan for " + prayer);
         markPlaying(prayer);
-        Intent i = new Intent(ctx, AzanService.class).putExtra(EXTRA_PRAYER, prayer);
+        Intent i = new Intent(app, AzanService.class).putExtra(EXTRA_PRAYER, prayer);
         try {
-            if (Build.VERSION.SDK_INT >= 26) ctx.startForegroundService(i);
-            else ctx.startService(i);
+            if (Build.VERSION.SDK_INT >= 26) app.startForegroundService(i);
+            else app.startService(i);
+            return true;
         } catch (Exception e) {
-            Log.w(TAG, "could not start azan: " + e.getMessage());
+            Log.w(TAG, "could not start azan service: " + e.getMessage());
             markStopped();
+            MainActivity main = MainActivity.getInstance();
+            if (main == null || !main.hasWindowFocus()) {
+                try {
+                    Intent act = new Intent(app, MainActivity.class)
+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK
+                                    | Intent.FLAG_ACTIVITY_SINGLE_TOP
+                                    | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED)
+                            .putExtra(EXTRA_PRAYER, prayer)
+                            .putExtra(EXTRA_CONFIRM, true);
+                    app.startActivity(act);
+                } catch (Exception e2) {
+                    Log.w(TAG, "could not open home for azan: " + e2.getMessage());
+                }
+            }
+            return false;
         }
     }
 
@@ -192,19 +213,31 @@ final class AzanPlayer {
         cancelAlarms(ctx);
         List<PrayerTimes.Slot> upcoming = PrayerTimes.upcomingAzan(ctx, System.currentTimeMillis());
         int n = Math.min(upcoming.size(), 6);
+        Context app = ctx.getApplicationContext();
+        if (app == null) app = ctx;
         for (int i = 0; i < n; i++) {
             PrayerTimes.Slot slot = upcoming.get(i);
             Intent intent = new Intent(ACTION_AZAN)
-                    .setClass(ctx, AzanReceiver.class)
+                    .setClass(app, AzanReceiver.class)
                     .putExtra(EXTRA_PRAYER, slot.name);
-            PendingIntent pi = PendingIntent.getBroadcast(ctx, ALARM_BASE + i, intent,
+            if (Build.VERSION.SDK_INT >= 24) intent.addFlags(Intent.FLAG_RECEIVER_FOREGROUND);
+            PendingIntent pi = PendingIntent.getBroadcast(app, ALARM_BASE + i, intent,
                     PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
             try {
-                if (Build.VERSION.SDK_INT >= 23) {
+                if (i == 0 && Build.VERSION.SDK_INT >= 21) {
+                    Intent show = new Intent(app, MainActivity.class)
+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_SINGLE_TOP)
+                            .putExtra(EXTRA_PRAYER, slot.name)
+                            .putExtra(EXTRA_CONFIRM, true);
+                    PendingIntent showPi = PendingIntent.getActivity(app, ALARM_BASE + 80, show,
+                            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+                    am.setAlarmClock(new AlarmManager.AlarmClockInfo(slot.atMs, showPi), pi);
+                } else if (Build.VERSION.SDK_INT >= 23) {
                     am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, slot.atMs, pi);
                 } else {
                     am.setExact(AlarmManager.RTC_WAKEUP, slot.atMs, pi);
                 }
+                Log.i(TAG, "alarm " + slot.name + " at " + slot.atMs);
             } catch (Exception e) {
                 Log.w(TAG, "alarm " + slot.name + ": " + e.getMessage());
             }

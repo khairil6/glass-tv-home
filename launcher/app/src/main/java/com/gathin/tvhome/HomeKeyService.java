@@ -39,16 +39,28 @@ public class HomeKeyService extends AccessibilityService {
     /** Scancodes of remote buttons that should open Settings (config.xml, settings_key_scancodes). */
     private int[] settingsScancodes = new int[0];
 
+    private final Runnable azanTick = new Runnable() {
+        @Override
+        public void run() {
+            AzanPlayer.checkAndPlay(HomeKeyService.this);
+            homeHandler.postDelayed(this, 45_000L);
+        }
+    };
+
     @Override
     protected void onServiceConnected() {
         super.onServiceConnected();
         instance = this;
         settingsScancodes = getResources().getIntArray(R.array.settings_key_scancodes);
         Log.i(TAG, "HomeKeyService connected");
+        homeHandler.removeCallbacks(azanTick);
+        homeHandler.post(azanTick);
+        AzanPlayer.scheduleAlarms(this);
     }
 
     @Override
     public void onDestroy() {
+        homeHandler.removeCallbacks(azanTick);
         if (instance == this) instance = null;
         super.onDestroy();
     }

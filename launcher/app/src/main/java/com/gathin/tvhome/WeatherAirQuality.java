@@ -38,6 +38,7 @@ final class WeatherAirQuality {
     private static final String KEY_AQI_JSON = "aqi_json";
     private static final String KEY_TEMP = "temp";
     private static final String KEY_CODE = "weather_code";
+    private static final String KEY_WIND = "wind";
     private static final String KEY_AQI = "aqi";
     private static final String KEY_AQI_STATUS = "aqi_status";
     private static final String KEY_AQI_PARAM = "aqi_param";
@@ -174,10 +175,12 @@ final class WeatherAirQuality {
 
                 int temp = 29;
                 int code = 2; // Partly cloudy
+                int wind = 8;
                 if (wJson != null && wJson.has("current")) {
                     JSONObject curr = wJson.getJSONObject("current");
                     temp = (int) Math.round(curr.optDouble("temperature_2m", 29.0));
                     code = curr.optInt("weather_code", 2);
+                    wind = (int) Math.round(curr.optDouble("wind_speed_10m", 8.0));
                 }
 
                 // 2. Fetch Official Air Quality from Jabatan Alam Sekitar Malaysia (APIMS)
@@ -230,6 +233,7 @@ final class WeatherAirQuality {
                 if (fallbackAqiJson != null) edit.putString(KEY_AQI_JSON, fallbackAqiJson.toString());
                 edit.putInt(KEY_TEMP, temp)
                     .putInt(KEY_CODE, code)
+                    .putInt(KEY_WIND, wind)
                     .putInt(KEY_AQI, aqi)
                     .putString(KEY_AQI_STATUS, aqiStatus)
                     .putString(KEY_AQI_PARAM, aqiParam)
@@ -248,6 +252,28 @@ final class WeatherAirQuality {
                 Log.w(TAG, "Weather/AQI sync error: " + e.getMessage());
             }
         }, "weather-aqi-sync").start();
+    }
+
+    static int getCode(Context context) {
+        return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getInt(KEY_CODE, 2);
+    }
+
+    static int getTemp(Context context) {
+        return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).getInt(KEY_TEMP, 29);
+    }
+
+    static int getWind(Context context) {
+        SharedPreferences prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        if (prefs.contains(KEY_WIND)) return prefs.getInt(KEY_WIND, 8);
+        String json = prefs.getString(KEY_WEATHER_JSON, null);
+        if (json != null) {
+            try {
+                JSONObject curr = new JSONObject(json).optJSONObject("current");
+                if (curr != null) return (int) Math.round(curr.optDouble("wind_speed_10m", 8));
+            } catch (Exception ignored) {
+            }
+        }
+        return 8;
     }
 
     /** Formats a clean Spannable UI string for the Home screen: "⛅ 29° Cerah  •  IPU 112 Tidak Sihat" */

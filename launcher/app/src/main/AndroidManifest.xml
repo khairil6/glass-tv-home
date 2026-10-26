@@ -42,6 +42,10 @@
             <action android:name="android.intent.action.MAIN" />
             <category android:name="com.gathin.tvhome.category.DOCK_CARD" />
         </intent>
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
+        </intent>
         <!-- China-market MIUI TV firmware: the Settings and Wi-Fi pills fall back to Xiaomi's settings app. -->
         <package android:name="com.xiaomi.mitv.settings" />
     </queries>
@@ -76,8 +80,34 @@
         </activity>
 
         <activity
+            android:name=".PrayerActivity"
+            android:label="Waktu Solat"
+            android:exported="true"
+            android:excludeFromRecents="false"
+            android:screenOrientation="landscape"
+            android:theme="@style/Theme.TvHome">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity
             android:name=".WeatherActivity"
             android:label="Weather &amp; Air Quality"
+            android:exported="true"
+            android:excludeFromRecents="false"
+            android:screenOrientation="landscape"
+            android:theme="@style/Theme.TvHome">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".NewsActivity"
+            android:label="News"
             android:exported="true"
             android:excludeFromRecents="false"
             android:screenOrientation="landscape"
@@ -115,12 +145,14 @@
 
         <receiver
             android:name=".AzanReceiver"
-            android:exported="true">
+            android:exported="true"
+            android:directBootAware="true">
             <intent-filter>
                 <action android:name="com.gathin.tvhome.AZAN" />
             </intent-filter>
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
             </intent-filter>
         </receiver>

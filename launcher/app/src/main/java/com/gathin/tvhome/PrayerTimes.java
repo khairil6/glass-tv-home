@@ -639,6 +639,54 @@ final class PrayerTimes {
         return times;
     }
 
+    static final class NextInfo {
+        final String name;
+        final String timeStr;
+        final long remainingMs;
+        final float progress;
+
+        NextInfo(String name, String timeStr, long remainingMs, float progress) {
+            this.name = name;
+            this.timeStr = timeStr;
+            this.remainingMs = remainingMs;
+            this.progress = progress;
+        }
+    }
+
+    static NextInfo getNextInfo(Context context) {
+        long nowMs = System.currentTimeMillis();
+        List<Slot> upcoming = upcomingAzan(context, nowMs);
+        if (upcoming.isEmpty()) {
+            return new NextInfo("Subuh", "--:--", 0L, 0f);
+        }
+        Slot next = upcoming.get(0);
+        SimpleDateFormat timeFmt = new SimpleDateFormat("HH:mm", Locale.getDefault());
+        long remaining = Math.max(0L, next.atMs - nowMs);
+        long[] times = timesToday(context);
+        long prevMs = nowMs - 3 * 60 * 60 * 1000L;
+        if (times != null && times.length >= 6) {
+            int[] idx = {0, 2, 3, 4, 5};
+            for (int i : idx) {
+                if (times[i] <= nowMs) prevMs = times[i];
+            }
+        }
+        float span = Math.max(1f, (float) (next.atMs - prevMs));
+        float progress = Math.min(1f, Math.max(0f, (nowMs - prevMs) / span));
+        return new NextInfo(next.name, timeFmt.format(new Date(next.atMs)), remaining, progress);
+    }
+
+    static String formatCountdown(long remainingMs) {
+        long mins = remainingMs / 60000L;
+        if (mins >= 60) {
+            long h = mins / 60L;
+            long m = mins % 60L;
+            if (m == 0) return h + (h == 1 ? " jam lagi" : " jam lagi");
+            return h + " jam " + m + " minit lagi";
+        }
+        if (mins >= 1) return mins + " minit lagi";
+        return "kurang seminit lagi";
+    }
+
     /** Returns Islamic Hijrah date (e.g. "11 Jamadilawal 1448H"). */
     static String getHijriDate() {
         try {

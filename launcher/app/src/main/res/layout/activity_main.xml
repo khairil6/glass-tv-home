@@ -14,6 +14,15 @@
         android:layout_height="match_parent"
         android:alpha="0" />
 
+    <!-- Weather animation over the wallpaper, under clock / tiles. -->
+    <com.gathin.tvhome.WeatherFxView
+        android:id="@+id/weatherFx"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clickable="false"
+        android:focusable="false"
+        android:importantForAccessibility="no" />
+
     <!-- Top shelf: the place's name, its country and what it is about, positioned above the dock in code.
          The width is capped in code to a share of the space between the side paddings, so the
          description wraps in a column instead of running the width of the screen. -->
@@ -92,6 +101,8 @@
         android:layout_marginEnd="56dp"
         android:orientation="vertical"
         android:gravity="end"
+        android:clipChildren="false"
+        android:clipToPadding="false"
         android:alpha="0">
 
         <!-- Ayat of the day: Reference -->
@@ -146,12 +157,28 @@
             android:maxLines="2"
             android:ellipsize="end" />
 
+        <!-- Waktu Solat in a frosted glass cloud -->
+        <LinearLayout
+            android:id="@+id/prayerCard"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:orientation="vertical"
+            android:gravity="end"
+            android:background="@drawable/prayer_card_bg"
+            android:paddingStart="16dp"
+            android:paddingEnd="16dp"
+            android:paddingTop="10dp"
+            android:paddingBottom="12dp"
+            android:focusable="true"
+            android:clickable="true"
+            android:descendantFocusability="blocksDescendants">
+
         <!-- Waktu Solat Header (e.g. WAKTU SOLAT • 11 JAMADILAWAL 1448H) -->
         <TextView
             android:id="@+id/prayerHeader"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
             android:textColor="#B3FFFFFF"
             android:textSize="12sp"
             android:fontFamily="@font/outfit"
@@ -168,7 +195,7 @@
             android:id="@+id/prayerTable"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
+            android:layout_marginTop="6dp"
             android:orientation="horizontal"
             android:gravity="end">
 
@@ -370,6 +397,7 @@
                     android:shadowRadius="4" />
             </LinearLayout>
         </LinearLayout>
+        </LinearLayout>
     </LinearLayout>
 
     <LinearLayout
@@ -478,31 +506,88 @@
                 </LinearLayout>
             </LinearLayout>
 
-            <!-- Bawah Jam: Weather plus Haze API (clickable & focusable pill to open WeatherActivity) -->
-            <TextView
-                android:id="@+id/weatherAirQuality"
-                android:layout_width="wrap_content"
+            <!-- Bawah Jam: Weather pill, then a running news ticker pill (local + global). -->
+            <LinearLayout
+                android:id="@+id/pillsRow"
+                android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_below="@id/leftBlock"
                 android:layout_alignParentStart="true"
                 android:layout_marginTop="8dp"
-                android:focusable="true"
-                android:clickable="true"
-                android:background="@drawable/weather_pill_bg"
-                android:paddingStart="12dp"
-                android:paddingEnd="12dp"
-                android:paddingTop="5dp"
-                android:paddingBottom="5dp"
-                android:includeFontPadding="false"
-                android:textColor="#FFFFFFFF"
-                android:textSize="14sp"
-                android:fontFamily="@font/outfit"
-                android:fontVariationSettings="'wght' 500"
-                android:shadowColor="#99000000"
-                android:shadowDx="0"
-                android:shadowDy="1"
-                android:shadowRadius="3"
-                android:singleLine="true" />
+                android:orientation="horizontal"
+                android:gravity="center_vertical"
+                android:clipChildren="false"
+                android:clipToPadding="false">
+
+                <TextView
+                    android:id="@+id/weatherAirQuality"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:focusable="true"
+                    android:clickable="true"
+                    android:background="@drawable/weather_pill_bg"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="12dp"
+                    android:paddingTop="5dp"
+                    android:paddingBottom="5dp"
+                    android:includeFontPadding="false"
+                    android:textColor="#FFFFFFFF"
+                    android:textSize="14sp"
+                    android:fontFamily="@font/outfit"
+                    android:fontVariationSettings="'wght' 500"
+                    android:shadowColor="#99000000"
+                    android:shadowDx="0"
+                    android:shadowDy="1"
+                    android:shadowRadius="3"
+                    android:singleLine="true" />
+
+                <LinearLayout
+                    android:id="@+id/newsTickerPill"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:layout_marginStart="10dp"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:background="@drawable/weather_pill_bg"
+                    android:paddingStart="10dp"
+                    android:paddingEnd="10dp"
+                    android:paddingTop="5dp"
+                    android:paddingBottom="5dp"
+                    android:focusable="true"
+                    android:clickable="true"
+                    android:clipChildren="false">
+
+                    <com.gathin.tvhome.NewsLiveDot
+                        android:layout_width="12dp"
+                        android:layout_height="12dp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="6dp"
+                        android:includeFontPadding="false"
+                        android:text="NEWS"
+                        android:textColor="#FFFFFFFF"
+                        android:textSize="12sp"
+                        android:fontFamily="@font/outfit"
+                        android:fontVariationSettings="'wght' 700"
+                        android:letterSpacing="0.08" />
+
+                    <View
+                        android:layout_width="1dp"
+                        android:layout_height="12dp"
+                        android:layout_marginStart="8dp"
+                        android:layout_marginEnd="8dp"
+                        android:background="#40FFFFFF" />
+
+                    <com.gathin.tvhome.NewsTickerView
+                        android:id="@+id/newsTicker"
+                        android:layout_width="0dp"
+                        android:layout_height="18dp"
+                        android:layout_weight="1" />
+                </LinearLayout>
+            </LinearLayout>
 
             <!-- Top Menu Buttons: Strictly in the same row, vertically centered with the clock -->
             <LinearLayout
@@ -546,7 +631,7 @@
                 android:id="@+id/prayerTimes"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_below="@id/weatherAirQuality"
+                android:layout_below="@id/pillsRow"
                 android:layout_alignParentStart="true"
                 android:visibility="gone" />
         </RelativeLayout>

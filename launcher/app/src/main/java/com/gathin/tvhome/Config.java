@@ -106,9 +106,11 @@ final class Config {
         this.overlayApplied = overlayApplied;
     }
 
-    /** The folder the theme tools push into; null when external storage is unavailable. */
+    /** The folder the theme tools push into; falls back to internal storage if the SD card is not ready. */
     static File dir(Context ctx) {
-        return ctx.getExternalFilesDir(null);
+        File ext = ctx.getExternalFilesDir(null);
+        if (ext != null) return ext;
+        return ctx.getFilesDir();
     }
 
     static Config load(Context ctx) {
