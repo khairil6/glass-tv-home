@@ -126,11 +126,14 @@ final class PrayerTimes {
 
     static {
         // W.P. & Putrajaya
-        PRESET_ZONES.add(new PrayerZone("WLY01", "W.P.", "Putrajaya & Kuala Lumpur", 2.9158, 101.6909));
+        PRESET_ZONES.add(new PrayerZone("WLY01", "W.P.", "Putrajaya", 2.9158, 101.6909));
+        PRESET_ZONES.add(new PrayerZone("WLY01", "W.P.", "Kuala Lumpur", 3.1390, 101.6869));
         PRESET_ZONES.add(new PrayerZone("WLY02", "W.P.", "Labuan", 5.3347, 115.2289));
 
-        // Selangor
-        PRESET_ZONES.add(new PrayerZone("SGR01", "Selangor", "Shah Alam, Petaling, Gombak, Sepang", 3.0683, 101.5058));
+        // Selangor — Dengkil first so it is easy to find (same JAKIM code as Sepang / SGR01)
+        PRESET_ZONES.add(new PrayerZone("SGR01", "Selangor", "Dengkil, Sepang", 2.8558, 101.6764));
+        PRESET_ZONES.add(new PrayerZone("SGR01", "Selangor", "Cyberjaya, Sepang", 2.9213, 101.6559));
+        PRESET_ZONES.add(new PrayerZone("SGR01", "Selangor", "Shah Alam, Petaling, Gombak, Hulu Langat", 3.0683, 101.5058));
         PRESET_ZONES.add(new PrayerZone("SGR02", "Selangor", "Kuala Selangor, Sabak Bernam", 3.3500, 101.2500));
         PRESET_ZONES.add(new PrayerZone("SGR03", "Selangor", "Klang, Kuala Langat, Banting", 3.0108, 101.4081));
 
@@ -142,9 +145,10 @@ final class PrayerTimes {
         PRESET_ZONES.add(new PrayerZone("NGS01", "Negeri Sembilan", "Tampin, Jempol", 2.4700, 102.2300));
 
         // Johor
-        PRESET_ZONES.add(new PrayerZone("JHR02", "Johor", "Johor Bahru, Pasir Gudang, Kulai", 1.4947, 103.7419));
-        PRESET_ZONES.add(new PrayerZone("JHR03", "Johor", "Batu Pahat, Muar, Tangkak, Segamat", 1.9191, 102.8658));
-        PRESET_ZONES.add(new PrayerZone("JHR04", "Johor", "Kluang, Mersing", 2.0306, 103.3214));
+        PRESET_ZONES.add(new PrayerZone("JHR01", "Johor", "Pulau Aur dan Pulau Pemanggil", 2.4440, 104.2300));
+        PRESET_ZONES.add(new PrayerZone("JHR02", "Johor", "Johor Bahru, Kota Tinggi, Mersing, Kulai", 1.4947, 103.7419));
+        PRESET_ZONES.add(new PrayerZone("JHR03", "Johor", "Kluang, Pontian", 2.0306, 103.3214));
+        PRESET_ZONES.add(new PrayerZone("JHR04", "Johor", "Batu Pahat, Muar, Segamat, Tangkak", 1.9191, 102.8658));
 
         // Pulau Pinang
         PRESET_ZONES.add(new PrayerZone("PNG01", "Pulau Pinang", "Seluruh Negeri Pulau Pinang", 5.3942, 100.3983));
@@ -158,20 +162,28 @@ final class PrayerTimes {
         // Kedah & Perlis
         PRESET_ZONES.add(new PrayerZone("KDH01", "Kedah", "Kota Setar, Pokok Sena, Kubang Pasu", 6.1371, 100.3469));
         PRESET_ZONES.add(new PrayerZone("KDH02", "Kedah", "Kuala Muda, Yan, Pendang, Sungai Petani", 5.6297, 100.4677));
-        PRESET_ZONES.add(new PrayerZone("KDH07", "Kedah", "Pulau Langkawi", 6.3316, 99.8585));
+        PRESET_ZONES.add(new PrayerZone("KDH03", "Kedah", "Padang Terap, Sik", 6.2500, 100.7333));
+        PRESET_ZONES.add(new PrayerZone("KDH04", "Kedah", "Baling", 5.6778, 100.9172));
+        PRESET_ZONES.add(new PrayerZone("KDH05", "Kedah", "Kulim, Bandar Baharu", 5.3650, 100.5615));
+        PRESET_ZONES.add(new PrayerZone("KDH06", "Kedah", "Pulau Langkawi", 6.3316, 99.8585));
+        PRESET_ZONES.add(new PrayerZone("KDH07", "Kedah", "Puncak Gunung Jerai", 5.7917, 100.4333));
         PRESET_ZONES.add(new PrayerZone("PLS01", "Perlis", "Kangar, Padang Besar, Arau", 6.4299, 100.2109));
 
         // Pahang
-        PRESET_ZONES.add(new PrayerZone("PHG02", "Pahang", "Kuantan, Pekan, Muadzam Shah", 3.8192, 103.2966));
+        PRESET_ZONES.add(new PrayerZone("PHG01", "Pahang", "Pulau Tioman", 2.7900, 104.1700));
+        PRESET_ZONES.add(new PrayerZone("PHG02", "Pahang", "Kuantan, Pekan, Rompin, Muadzam Shah", 3.8192, 103.2966));
         PRESET_ZONES.add(new PrayerZone("PHG03", "Pahang", "Jerantut, Temerloh, Maran, Bera", 3.4478, 102.4178));
         PRESET_ZONES.add(new PrayerZone("PHG04", "Pahang", "Bentong, Raub, Lipis", 3.5200, 101.9000));
-        PRESET_ZONES.add(new PrayerZone("PHG06", "Pahang", "Cameron Highlands", 4.4700, 101.3800));
+        PRESET_ZONES.add(new PrayerZone("PHG05", "Pahang", "Genting Sempah, Janda Baik, Bukit Tinggi", 3.3500, 101.7900));
+        PRESET_ZONES.add(new PrayerZone("PHG06", "Pahang", "Cameron Highlands, Genting Highlands", 4.4700, 101.3800));
 
         // Terengganu & Kelantan
         PRESET_ZONES.add(new PrayerZone("TRG01", "Terengganu", "Kuala Terengganu, Marang, Kuala Nerus", 5.3117, 103.1325));
+        PRESET_ZONES.add(new PrayerZone("TRG02", "Terengganu", "Besut, Setiu", 5.5619, 102.5456));
+        PRESET_ZONES.add(new PrayerZone("TRG03", "Terengganu", "Hulu Terengganu", 5.0725, 102.7194));
         PRESET_ZONES.add(new PrayerZone("TRG04", "Terengganu", "Kemaman, Dungun", 4.2622, 103.4258));
-        PRESET_ZONES.add(new PrayerZone("KTN01", "Kelantan", "Kota Bharu, Bachok, Pasir Puteh, Tumpat", 6.1256, 102.2386));
-        PRESET_ZONES.add(new PrayerZone("KTN02", "Kelantan", "Machang, Pasir Mas, Tanah Merah", 5.7600, 102.2100));
+        PRESET_ZONES.add(new PrayerZone("KTN01", "Kelantan", "Kota Bharu, Bachok, Pasir Puteh, Tumpat, Machang, Pasir Mas", 6.1256, 102.2386));
+        PRESET_ZONES.add(new PrayerZone("KTN03", "Kelantan", "Gua Musang, Jeli", 4.8842, 101.9644));
 
         // Sabah
         PRESET_ZONES.add(new PrayerZone("SBH07", "Sabah", "Kota Kinabalu, Penampang, Tuaran, Papar", 6.0971, 116.1665));
@@ -252,12 +264,13 @@ final class PrayerTimes {
         String loc = AppLocationManager.getLocationName(context).toLowerCase(Locale.ROOT);
         String stationId = AppLocationManager.getStationId(context).toUpperCase(Locale.ROOT);
 
+        if (loc.contains("dengkil") || loc.contains("sepang") || loc.contains("cyberjaya")) return "SGR01";
         if (loc.contains("putrajaya") || stationId.equals("CA17W")) return "WLY01";
         if (loc.contains("kuala lumpur") || loc.contains("cheras") || loc.contains("batu muda")) return "WLY01";
         if (loc.contains("labuan")) return "WLY02";
         if (loc.contains("melaka") || loc.contains("alor gajah") || loc.contains("rambai")) return "MLK01";
-        if (loc.contains("petaling") || loc.contains("shah alam")) return "SGR01";
-        if (loc.contains("klang") || loc.contains("banting")) return "SGR03";
+        if (loc.contains("petaling") || loc.contains("shah alam") || loc.contains("gombak") || loc.contains("hulu langat")) return "SGR01";
+        if (loc.contains("klang") || loc.contains("banting") || loc.contains("kuala langat")) return "SGR03";
         if (loc.contains("seremban") || loc.contains("nilai") || loc.contains("port dickson")) return "NGS02";
         if (loc.contains("johor") || loc.contains("larkin") || loc.contains("pasir gudang")) return "JHR02";
         if (loc.contains("batu pahat")) return "JHR03";
@@ -576,6 +589,54 @@ final class PrayerTimes {
         SimpleDateFormat sdf = new SimpleDateFormat("h:mm a", Locale.getDefault());
         String zone = getShortZoneName(context);
         return prayerName + " • " + sdf.format(new Date(nextTimeMs)) + " (" + zone + ")";
+    }
+
+    static final class Slot {
+        final String name;
+        final long atMs;
+
+        Slot(String name, long atMs) {
+            this.name = name;
+            this.atMs = atMs;
+        }
+    }
+
+    /** Prayer that started within windowMs, skipping Syuruk. */
+    static Slot dueAzan(Context context, long nowMs, long windowMs) {
+        long[] times = timesToday(context);
+        if (times == null) return null;
+        int[] idx = {0, 2, 3, 4, 5};
+        for (int i : idx) {
+            long t = times[i];
+            if (nowMs >= t && nowMs < t + windowMs) return new Slot(PRAYER_NAMES[i], t);
+        }
+        return null;
+    }
+
+    /** Remaining azan times today, then tomorrow's Subuh. */
+    static java.util.List<Slot> upcomingAzan(Context context, long nowMs) {
+        java.util.List<Slot> out = new java.util.ArrayList<>();
+        Calendar now = Calendar.getInstance();
+        long[] times = timesToday(context);
+        if (times != null) {
+            int[] idx = {0, 2, 3, 4, 5};
+            for (int i : idx) {
+                if (times[i] > nowMs + 2000L) out.add(new Slot(PRAYER_NAMES[i], times[i]));
+            }
+        }
+        Calendar tomorrow = (Calendar) now.clone();
+        tomorrow.add(Calendar.DAY_OF_MONTH, 1);
+        long[] tom = getTimesForToday(context, tomorrow.get(Calendar.DAY_OF_MONTH));
+        if (tom == null || tom.length < 6) tom = calculateFallback(context, tomorrow);
+        if (tom != null && tom.length > 0) out.add(new Slot(PRAYER_NAMES[0], tom[0]));
+        return out;
+    }
+
+    private static long[] timesToday(Context context) {
+        Calendar now = Calendar.getInstance();
+        long[] times = getTimesForToday(context, now.get(Calendar.DAY_OF_MONTH));
+        if (times == null || times.length < 6) times = calculateFallback(context, now);
+        return times;
     }
 
     /** Returns Islamic Hijrah date (e.g. "11 Jamadilawal 1448H"). */

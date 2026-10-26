@@ -268,6 +268,29 @@ public class HomeKeyService extends AccessibilityService {
 
         if (keyCode != KeyEvent.KEYCODE_ALL_APPS && keyCode != KeyEvent.KEYCODE_HOME) return false;
         if (event.getAction() == KeyEvent.ACTION_UP && !event.isCanceled()) {
+            Log.i(TAG, "home key playing=" + AzanPlayer.isPlaying()
+                    + " service=" + AzanService.isRunning());
+            if (AzanPlayer.isPlaying()) {
+                lastHomePressTime = 0;
+                if (singleHomeRunnable != null) {
+                    homeHandler.removeCallbacks(singleHomeRunnable);
+                    singleHomeRunnable = null;
+                }
+                MainActivity main = MainActivity.getInstance();
+                if (main != null && main.hasWindowFocus() && !RecentAppsActivity.isForeground()) {
+                    main.runOnUiThread(main::handleAzanHomePress);
+                    return true;
+                }
+                Intent home = new Intent(Intent.ACTION_MAIN)
+                        .addCategory(Intent.CATEGORY_HOME)
+                        .setPackage(getPackageName())
+                        .putExtra(AzanPlayer.EXTRA_CONFIRM, true)
+                        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_RESET_TASK_IF_NEEDED);
+                try {
+                    startActivity(home);
+                } catch (Exception ignored) {}
+                return true;
+            }
             long now = SystemClock.uptimeMillis();
             if (now - lastHomePressTime < DOUBLE_HOME_INTERVAL_MS) {
                 // Double press detected!

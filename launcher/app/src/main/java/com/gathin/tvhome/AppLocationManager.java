@@ -51,8 +51,12 @@ public class AppLocationManager {
     private static final List<Station> PRESET_STATIONS = new ArrayList<>();
 
     static {
-        // W.P. Putrajaya
+        // W.P. Putrajaya & nearby
         PRESET_STATIONS.add(new Station("CA17W", "Putrajaya", "W.P. Putrajaya", "SK Putrajaya Presint 18 (2)", 2.9158, 101.6909));
+        // Dengkil has no DOE station of its own; Putrajaya Presint 18 is the nearest official JAS site.
+        PRESET_STATIONS.add(new Station("CA17W", "Dengkil", "Selangor", "Stesen JAS terdekat: SK Putrajaya Presint 18", 2.8558, 101.6764));
+        PRESET_STATIONS.add(new Station("CA17W", "Cyberjaya", "Selangor", "Stesen JAS terdekat: SK Putrajaya Presint 18", 2.9213, 101.6559));
+        PRESET_STATIONS.add(new Station("CA17W", "Sepang", "Selangor", "Stesen JAS terdekat: SK Putrajaya Presint 18", 2.6913, 101.7505));
 
         // W.P. Kuala Lumpur
         PRESET_STATIONS.add(new Station("CA16W", "Cheras", "W.P. Kuala Lumpur", "SMK Seri Permaisuri", 3.1063, 101.7179));
@@ -63,6 +67,8 @@ public class AppLocationManager {
         PRESET_STATIONS.add(new Station("CA20B", "Shah Alam", "Selangor", "Seksyen 4, Shah Alam", 3.0683, 101.5058));
         PRESET_STATIONS.add(new Station("CA21B", "Klang", "Selangor", "SMK Raja Lumu", 3.0108, 101.4081));
         PRESET_STATIONS.add(new Station("CA22B", "Banting", "Selangor", "Kolej MARA Banting", 2.8167, 101.6230));
+        PRESET_STATIONS.add(new Station("CA18B", "Kuala Selangor", "Selangor", "SMK Kuala Selangor", 3.3400, 101.2500));
+        PRESET_STATIONS.add(new Station("CA19B", "Kajang", "Selangor", "Stesen JAS terdekat: Petaling Jaya", 2.9935, 101.7879));
 
         // Melaka
         PRESET_STATIONS.add(new Station("CA28M", "Bandaraya Melaka", "Melaka", "SMK Tinggi Melaka", 2.1909, 102.2571));

@@ -184,6 +184,9 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     /** True while Home's first frame is held back (see holdFirstFrame). */
     private boolean firstFrameHeld;
     private Dialog cardPrompt;
+    private View azanConfirmOverlay;
+    private Button azanKeepBtn, azanStopBtn;
+    private long azanConfirmShownAt;
     /** Set when a decision could not be saved: no more prompts until the next resume, instead of asking in a loop. */
     private boolean promptsPaused;
     /** The Inputs or Module cards dropdown while one is open, so onPause can close it. */
@@ -275,6 +278,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             refreshPlacesIfDue();
             refreshOnlineWallpapersIfDue();
             checkInactivity();
+            AzanPlayer.checkAndPlay(MainActivity.this);
             handler.postDelayed(this, MINUTE_MS);
         }
     };
@@ -832,6 +836,14 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     @Override
     protected void onNewIntent(Intent intent) {
         super.onNewIntent(intent);
+        if (intent != null) setIntent(intent);
+        if (intent != null && AzanPlayer.isPlaying()
+                && (intent.getBooleanExtra(AzanPlayer.EXTRA_CONFIRM, false)
+                || intent.hasCategory(Intent.CATEGORY_HOME))) {
+            intent.removeExtra(AzanPlayer.EXTRA_CONFIRM);
+            handleAzanHomePress();
+            return;
+        }
         if (intent != null && intent.getBooleanExtra("screensaver", false)) {
             showNightstandScreensaver();
             return;
@@ -909,6 +921,12 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         handler.removeCallbacks(cacheClean);
         handler.postDelayed(cacheClean, CacheCleaner.IDLE_MS);
         hiddenSinceResume = false;
+        AzanPlayer.scheduleAlarms(this);
+        AzanPlayer.checkAndPlay(this);
+        maybeShowAzanConfirm(getIntent());
+        if (AzanPlayer.isPlaying() && AzanPlayer.takePendingConfirm()) {
+            showAzanStopConfirm();
+        }
     }
 
     /** Rebuilds the tiles (and the module cards), then puts focus back where it was. */
@@ -1041,7 +1059,198 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         updateWeatherAqi();
         updatePrayerTimes();
         WeatherAirQuality.sync(this, this::updateWeatherAqi);
-        PrayerTimes.sync(this, this::updatePrayerTimes);
+        PrayerTimes.sync(this, () -> {
+            updatePrayerTimes();
+            AzanPlayer.scheduleAlarms(this);
+        });
+    }
+
+    /** Home while azan is playing: first press asks, second press (or Henti) stops it. */
+    boolean handleAzanHomePress() {
+        if (!AzanPlayer.isPlaying()) return false;
+        if (screensaverActive) dismissScreensaver();
+        if (wallpaperFullscreen) setWallpaperFullscreen(false);
+        long now = android.os.SystemClock.uptimeMillis();
+        if (AzanPlayer.isConfirmVisible() && azanConfirmShowing()) {
+            // Same Home press can arrive twice (accessibility + activity). Wait for a real second press.
+            if (now - azanConfirmShownAt < 2500L) return true;
+            stopAzanFromUi();
+            return true;
+        }
+        showAzanStopConfirm();
+        return true;
+    }
+
+    private void maybeShowAzanConfirm(Intent intent) {
+        if (intent == null || !intent.getBooleanExtra(AzanPlayer.EXTRA_CONFIRM, false)) return;
+        intent.removeExtra(AzanPlayer.EXTRA_CONFIRM);
+        if (AzanPlayer.isPlaying()) showAzanStopConfirm();
+    }
+
+    private void stopAzanFromUi() {
+        AzanPlayer.stop(this);
+        dismissAzanConfirm();
+        Toast.makeText(this, "Azan dihentikan", Toast.LENGTH_SHORT).show();
+    }
+
+    private boolean azanConfirmShowing() {
+        return azanConfirmOverlay != null && azanConfirmOverlay.getParent() != null;
+    }
+
+    private void dismissAzanConfirm() {
+        AzanPlayer.setConfirmVisible(false);
+        if (azanConfirmOverlay != null) {
+            if (azanConfirmOverlay.getParent() instanceof ViewGroup) {
+                ((ViewGroup) azanConfirmOverlay.getParent()).removeView(azanConfirmOverlay);
+            }
+            azanConfirmOverlay = null;
+        }
+        azanKeepBtn = null;
+        azanStopBtn = null;
+        if (grid != null) grid.setDescendantFocusability(ViewGroup.FOCUS_AFTER_DESCENDANTS);
+        if (glider != null) glider.setPaneHidden(false);
+        if (adapter != null && adapter.getItemCount() > 0) focusTile(lastFocused);
+    }
+
+    /** Keeps D-pad on Teruskan / Henti so it cannot jump to the app dock behind the dialog. */
+    private boolean dispatchAzanConfirmKey(KeyEvent event) {
+        if (!azanConfirmShowing()) return false;
+        int code = event.getKeyCode();
+        boolean down = event.getAction() == KeyEvent.ACTION_DOWN;
+        boolean up = event.getAction() == KeyEvent.ACTION_UP;
+        switch (code) {
+            case KeyEvent.KEYCODE_HOME:
+            case KeyEvent.KEYCODE_ALL_APPS:
+                if (up) handleAzanHomePress();
+                return true;
+            case KeyEvent.KEYCODE_BACK:
+            case KeyEvent.KEYCODE_ESCAPE:
+                if (up) dismissAzanConfirm();
+                return true;
+            case KeyEvent.KEYCODE_DPAD_LEFT:
+                if (down && azanKeepBtn != null) azanKeepBtn.requestFocus();
+                return true;
+            case KeyEvent.KEYCODE_DPAD_RIGHT:
+                if (down && azanStopBtn != null) azanStopBtn.requestFocus();
+                return true;
+            case KeyEvent.KEYCODE_DPAD_UP:
+            case KeyEvent.KEYCODE_DPAD_DOWN:
+                return true;
+            case KeyEvent.KEYCODE_DPAD_CENTER:
+            case KeyEvent.KEYCODE_ENTER:
+            case KeyEvent.KEYCODE_NUMPAD_ENTER:
+                if (up) {
+                    View focused = getCurrentFocus();
+                    if (focused != null) focused.performClick();
+                }
+                return true;
+            default:
+                return true;
+        }
+    }
+
+    void showAzanStopConfirm() {
+        if (!AzanPlayer.isPlaying() || root == null) return;
+        if (azanConfirmShowing()) return;
+        if (openMenu != null) closeMenu(false);
+        if (cardPrompt != null) cardPrompt.dismiss();
+        AzanPlayer.setConfirmVisible(true);
+        azanConfirmShownAt = android.os.SystemClock.uptimeMillis();
+
+        FrameLayout overlay = new FrameLayout(this);
+        overlay.setBackgroundColor(0xCC000000);
+        overlay.setClickable(true);
+        overlay.setFocusable(false);
+        overlay.setDescendantFocusability(ViewGroup.FOCUS_AFTER_DESCENDANTS);
+
+        LinearLayout box = new LinearLayout(this);
+        box.setOrientation(LinearLayout.VERTICAL);
+        box.setGravity(Gravity.CENTER_HORIZONTAL);
+        int pad = (int) (32 * density);
+        box.setPadding(pad, pad, pad, pad);
+        box.setBackgroundResource(R.drawable.pill_bg);
+        FrameLayout.LayoutParams boxLp = new FrameLayout.LayoutParams(
+                (int) (560 * density), ViewGroup.LayoutParams.WRAP_CONTENT);
+        boxLp.gravity = Gravity.CENTER;
+        overlay.addView(box, boxLp);
+
+        String prayer = AzanPlayer.currentPrayer();
+        if (prayer == null || prayer.isEmpty()) prayer = "solat";
+        TextView titleView = new TextView(this);
+        titleView.setText("Waktu " + prayer + " telah masuk");
+        titleView.setTextColor(Color.WHITE);
+        titleView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 24);
+        titleView.setTypeface(Typeface.DEFAULT_BOLD);
+        titleView.setGravity(Gravity.CENTER);
+        titleView.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
+        box.addView(titleView, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        DailyAyat.Ayat ayat = DailyAyat.getRandom();
+        TextView arabic = new TextView(this);
+        arabic.setText("\u201C" + ayat.arabic + "\u201D");
+        arabic.setTextColor(Color.WHITE);
+        arabic.setTextSize(TypedValue.COMPLEX_UNIT_SP, 22);
+        arabic.setGravity(Gravity.CENTER);
+        arabic.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
+        arabic.setTextDirection(View.TEXT_DIRECTION_RTL);
+        arabic.setPadding(0, (int) (18 * density), 0, (int) (10 * density));
+        box.addView(arabic, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        TextView translation = new TextView(this);
+        translation.setText(ayat.translation);
+        translation.setTextColor(0xCCFFFFFF);
+        translation.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16);
+        translation.setGravity(Gravity.CENTER);
+        translation.setTextAlignment(View.TEXT_ALIGNMENT_CENTER);
+        translation.setPadding(0, 0, 0, (int) (22 * density));
+        box.addView(translation, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        LinearLayout buttons = new LinearLayout(this);
+        buttons.setOrientation(LinearLayout.HORIZONTAL);
+        buttons.setGravity(Gravity.CENTER);
+        box.addView(buttons, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        Button keep = new Button(this);
+        keep.setId(View.generateViewId());
+        keep.setText("Teruskan");
+        keep.setAllCaps(false);
+        keep.setOnClickListener(v -> dismissAzanConfirm());
+        LinearLayout.LayoutParams keepLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        keepLp.setMarginEnd((int) (12 * density));
+        buttons.addView(keep, keepLp);
+
+        Button stop = new Button(this);
+        stop.setId(View.generateViewId());
+        stop.setText("Henti");
+        stop.setAllCaps(false);
+        stop.setOnClickListener(v -> stopAzanFromUi());
+        buttons.addView(stop, new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        keep.setNextFocusLeftId(keep.getId());
+        keep.setNextFocusRightId(stop.getId());
+        keep.setNextFocusUpId(keep.getId());
+        keep.setNextFocusDownId(keep.getId());
+        stop.setNextFocusLeftId(keep.getId());
+        stop.setNextFocusRightId(stop.getId());
+        stop.setNextFocusUpId(stop.getId());
+        stop.setNextFocusDownId(stop.getId());
+
+        if (grid != null) grid.setDescendantFocusability(ViewGroup.FOCUS_BLOCK_DESCENDANTS);
+        if (glider != null) glider.setPaneHidden(true);
+
+        root.addView(overlay, new FrameLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+        overlay.bringToFront();
+        azanConfirmOverlay = overlay;
+        azanKeepBtn = keep;
+        azanStopBtn = stop;
+        keep.post(keep::requestFocus);
     }
 
     @Override
@@ -1050,6 +1259,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     }
 
     private void handleBackPress() {
+        if (azanConfirmShowing()) {
+            dismissAzanConfirm();
+            return;
+        }
         if (openMenu != null) {
             closeMenu(true);
             return;
@@ -1768,13 +1981,19 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     @Override
     public boolean dispatchKeyEvent(KeyEvent event) {
         lastUserInteraction = android.os.SystemClock.elapsedRealtime();
+        if (dispatchAzanConfirmKey(event)) return true;
+        int code = event.getKeyCode();
+        if ((code == KeyEvent.KEYCODE_HOME || code == KeyEvent.KEYCODE_ALL_APPS)
+                && event.getAction() == KeyEvent.ACTION_UP
+                && handleAzanHomePress()) {
+            return true;
+        }
         if (screensaverActive) {
             if (event.getAction() == KeyEvent.ACTION_UP) {
                 dismissScreensaver();
             }
             return true;
         }
-        int code = event.getKeyCode();
         if (wallpaperFullscreen) {
             if (event.getAction() == KeyEvent.ACTION_UP) {
                 setWallpaperFullscreen(false);
@@ -1808,6 +2027,7 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         }
         if (code == KeyEvent.KEYCODE_HOME || code == KeyEvent.KEYCODE_ALL_APPS) {
             if (event.getAction() == KeyEvent.ACTION_UP) {
+                if (handleAzanHomePress()) return true;
                 if (screensaverActive) {
                     dismissScreensaver();
                     return true;
@@ -2149,7 +2369,13 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
             showPrayerZoneDialog();
         });
 
-        // Row 4: Sound Effects
+        // Row 4: Azan voice
+        addInputRow(rows, close, R.drawable.ic_mosque, "Azan: " + AzanPlayer.getStyleDisplayName(this), -1, () -> {
+            SoundEffects.playSelect();
+            showAzanStyleDialog();
+        });
+
+        // Row 5: Sound Effects
         String currentSoundTheme = SoundEffects.getActiveTheme(this);
         String soundLabel = "Sound: " + SoundEffects.getThemeDisplayName(currentSoundTheme);
         addInputRow(rows, close, R.drawable.ic_sound, soundLabel, -1, () -> {
@@ -2175,6 +2401,45 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
         int width = Math.max((int) (220 * density), panel.getMeasuredWidth());
 
         showMenu(panel, rows, anchor, width, false);
+    }
+
+    private void showAzanStyleDialog() {
+        final String[] labels = new String[]{
+                "🇲🇾 Malaysia",
+                "🕌 Madinah",
+                "🕋 Makkah",
+                "🔇 Mati"
+        };
+        final String[] keys = new String[]{
+                AzanPlayer.STYLE_MALAYSIA,
+                AzanPlayer.STYLE_MADINAH,
+                AzanPlayer.STYLE_MAKKAH,
+                AzanPlayer.STYLE_OFF
+        };
+        String current = AzanPlayer.getStyle(this);
+        int selected = 0;
+        for (int i = 0; i < keys.length; i++) {
+            if (keys[i].equals(current)) {
+                selected = i;
+                break;
+            }
+        }
+        AlertDialog.Builder builder = new AlertDialog.Builder(this, android.R.style.Theme_DeviceDefault_Dialog_Alert);
+        builder.setTitle("Pilih Azan");
+        builder.setSingleChoiceItems(labels, selected, (dialog, which) -> {
+            dialog.dismiss();
+            String key = keys[which];
+            AzanPlayer.setStyle(MainActivity.this, key);
+            if (AzanPlayer.STYLE_OFF.equals(key)) {
+                Toast.makeText(this, "Azan dimatikan", Toast.LENGTH_SHORT).show();
+            } else {
+                dismissAzanConfirm();
+                Toast.makeText(this, "Azan: " + AzanPlayer.getStyleDisplayName(this), Toast.LENGTH_SHORT).show();
+                AzanPlayer.preview(MainActivity.this);
+            }
+        });
+        builder.setNegativeButton("Tutup", (dialog, which) -> dialog.dismiss());
+        builder.create().show();
     }
 
     private void showSoundEffectsDialog() {
@@ -2877,12 +3142,17 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private void showHazeLocationDialog() {
         final List<AppLocationManager.Station> stations = AppLocationManager.getPresetStations();
         String currentId = AppLocationManager.getStationId(this);
+        String currentName = AppLocationManager.getLocationName(this);
         int selectedIndex = 0;
+        boolean named = false;
         CharSequence[] items = new CharSequence[stations.size()];
         for (int i = 0; i < stations.size(); i++) {
             AppLocationManager.Station s = stations.get(i);
             items[i] = s.getDisplayName() + "\n" + s.place;
-            if (s.id.equalsIgnoreCase(currentId)) {
+            if (s.name.equalsIgnoreCase(currentName)) {
+                selectedIndex = i;
+                named = true;
+            } else if (!named && s.id.equalsIgnoreCase(currentId)) {
                 selectedIndex = i;
             }
         }
@@ -2904,12 +3174,17 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     private void showPrayerZoneDialog() {
         final List<PrayerTimes.PrayerZone> zones = PrayerTimes.getPresetZones();
         String activeZone = PrayerTimes.getActiveZone(this);
+        String activeName = PrayerTimes.getActiveZoneName(this);
         int selectedIndex = 0;
+        boolean named = false;
         CharSequence[] items = new CharSequence[zones.size()];
         for (int i = 0; i < zones.size(); i++) {
             PrayerTimes.PrayerZone z = zones.get(i);
             items[i] = z.getDisplayName();
-            if (z.code.equalsIgnoreCase(activeZone)) {
+            if (z.name.equalsIgnoreCase(activeName)) {
+                selectedIndex = i;
+                named = true;
+            } else if (!named && z.code.equalsIgnoreCase(activeZone)) {
                 selectedIndex = i;
             }
         }
@@ -3002,6 +3277,10 @@ public class MainActivity extends Activity implements AppAdapter.TileListener {
     }
 
     private void showNightstandScreensaver() {
+        if (AzanPlayer.isPlaying()) {
+            showAzanStopConfirm();
+            return;
+        }
         if (screensaverActive || isFinishing() || isDestroyed()) return;
         if (wallpaperFullscreen) {
             setWallpaperFullscreen(false);

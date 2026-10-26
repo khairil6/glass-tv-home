@@ -87,4 +87,10 @@ final class DailyAyat {
         int dayOfYear = cal.get(Calendar.DAY_OF_YEAR);
         return AYATS[dayOfYear % AYATS.length];
     }
+
+    static Ayat getRandom() {
+        int i = (int) (System.nanoTime() % AYATS.length);
+        if (i < 0) i = -i;
+        return AYATS[i];
+    }
 }
